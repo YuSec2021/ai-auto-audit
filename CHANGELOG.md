@@ -1,3 +1,28 @@
+## v0.5.0 — Sprint 6 [MINOR bump]
+- New module `ai-audit-prototype/src/text-risk/` (epic-2 sprint 1/3): real text-risk matcher core in pure TypeScript, no new npm dependencies.
+  - `automaton.ts` — Aho-Corasick AC automaton (build, search, failure links via BFS, case-folding, overlap detection). 98.43% line coverage.
+  - `dfa.ts` — DFA normalizer: lowercase + fullwidth→halfwidth + whitespace (collapse or preserve). 95.83% line coverage.
+  - `regex-matcher.ts` — regex matcher with per-pattern `RegExp` cache. 95.65% line coverage.
+  - `wordlist.ts` — hand-rolled minimal YAML parser (~80 lines, no `js-yaml` dep) + `loadWordlist(path)` reader. 87.64% line coverage.
+  - `matcher.ts` — top-level `matchWordlist(text, wordlist, opts)` orchestrator returning `{ matched, total, score }` with `clamp01(score)`. 92.98% line coverage.
+  - `index.ts` — barrel. Excluded from coverage.
+  - `wordlist/wordlist.yaml` — 47 entries migrated from the 010-era `ai-audit-prototype/src/lib/prohibited-words.ts:8-65`: 极限词 13 + 虚假宣传 4 + 平台违规 20 + 促销诱导 8 + 禁售商品 2.
+- Test additions: 5 new test files (52 new vitest cases) — total project now 137 tests across 22 files, all passing.
+- `vitest.config.ts` additively extended: `src/text-risk/**/*.ts` added to `coverage.include`; `src/text-risk/index.ts` added to `coverage.exclude` as barrel (consistent with Sprint 2/3/4/5 deviation pattern).
+- Coverage: project 83.99% lines (Sprint 5 baseline 80.00% — improvement). text-risk module 92.99% lines. Threshold for feature sprint is 70% — well above.
+- `npx tsc -p tsconfig.app.json --noEmit` reports zero errors in the new `src/text-risk/` module. Pre-existing 010-era type errors in `src/components/`, `src/lib/`, `src/pages/`, `src/App.tsx`, `audit-engine.ts`, and one `orchestrator.ts:499` carry-over are unchanged (out of scope per Sprint 1 evaluator feedback).
+- Scoped `npx eslint src/text-risk/ --max-warnings=0` exits 0/0. Full-project eslint still reports 29+ pre-existing 010-era errors (unchanged, out of scope).
+- `npm audit --audit-level=high` reports 0 high/critical vulnerabilities.
+- Audit-line tuple `9,2,9` preserved end-to-end via `npx tsx scripts/run-audit.ts --smoke-test` — Sprint 6 does not touch the 7-fan-out orchestrator, and the Sprint 2 `text-risk-agent.ts` stub is left intact for Sprint 8 replacement.
+- 010-era `ai-audit-prototype/src/lib/prohibited-words.ts` preserved untouched (read-only for migration per the project 010-era-files rule). 47 entries successfully migrated to `src/text-risk/wordlist/wordlist.yaml`.
+- Sprint 2 stub `ai-audit-prototype/src/agents/text-risk-agent.ts` preserved (Sprint 8's job to replace).
+- 100+ uncommitted 010-era files in the working tree preserved untouched across all Sprint 6 operations.
+- **Non-blocking contract-side defects (not implementation issues)**, flagged by the Evaluator for follow-up:
+  - SC-5 step 2 expected 3 matches (京东 + 包邮 + 限时) for "京东包邮 限时促销" but the actual 47-entry wordlist does not contain bare 京东 or 促销 (only compound forms like 京东物流, 京东配送, 促销价). The actual output is 2 matches (包邮 + 限时). The vitest fixture uses "京东包邮 限时促销 大促 旗舰店" (4 unique matches: 包邮, 限时, 大促, 旗舰店) which exercises more of the wordlist. The implementation is correct against the actual wordlist.
+  - SC-3 step 2 expected substrings `包邮`, `span`, and `index` in the `matchRegex` JSON output, but `matchRegex` returns RegExp match arrays (no `span` field; `.index` is a RegExp property, not serialized by `JSON.stringify`). The vitest test correctly asserts `m[0]==='包邮'` and `m.index===2`. Contract-side assertion format issue.
+  - SC-3 step 3 used pattern `京东\w+` against `京东物流很快` and expected 1 match, but JavaScript's `\w` does not match CJK characters by default. The vitest test correctly uses `[\s\S]+`. Contract-side test step bug.
+  - All three contract-side issues are pre-implementation contract authoring errors and do not block Sprint 6 PASS. Recommend renegotiation in a future contract revision.
+
 
 ## v0.4.1 — Sprint 5 [PATCH bump]
 - Refactor: extracted 4 helpers from the 823-line `ai-audit-prototype/src/orchestrator/orchestrator.ts` into a new top-level module `ai-audit-prototype/src/pipeline-stages/`. Orchestrator shrinks from 823 → 595 lines (-228 lines, -27.7%). The extracted helpers are byte-identical to the in-file originals:
