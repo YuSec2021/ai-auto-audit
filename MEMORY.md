@@ -4,6 +4,11 @@
 | Sprint | Title | Status | Version | Date | Origin |
 |--------|-------|--------|---------|------|--------|
 | 1 | Contract — Agent interface & message bus foundation | PASS | v0.1.0 | 2026-06-01 | feature |
+| 2 | Pipeline orchestrator + 3 stub agents | PASS | v0.2.0 | 2026-06-01 | feature |
+| 3 | Preprocess Agent + MD5/pHash blocklist (manual sharp fallback) | PASS | v0.3.0 | 2026-06-02 | feature |
+| 4 | 4 specialized sub-agent stubs + SpecializedAgentRegistry + real RiskFusionAgent + canonical run-audit.ts --smoke-test CLI | PASS | v0.4.0 | 2026-06-02 | feature |
+| 5 | Tech debt cleanup: orchestrator refactor (823→595 lines) + 4 carry-over removals | PASS | v0.4.1 | 2026-06-04 | bugfix |
+| 6 | Text Risk matcher core: AC automaton + DFA normalizer + regex matcher + hand-rolled YAML wordlist (47 entries) | PASS | v0.5.0 | 2026-06-04 | feature |
 
-## Latest version: v0.1.0
-## Max sprint ID: 1
+## Latest version: v0.5.0
+## Max sprint ID: 6
