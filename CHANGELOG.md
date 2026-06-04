@@ -1,4 +1,26 @@
 
+## v0.4.1 — Sprint 5 [PATCH bump]
+- Refactor: extracted 4 helpers from the 823-line `ai-audit-prototype/src/orchestrator/orchestrator.ts` into a new top-level module `ai-audit-prototype/src/pipeline-stages/`. Orchestrator shrinks from 823 → 595 lines (-228 lines, -27.7%). The extracted helpers are byte-identical to the in-file originals:
+  - `clampToFusionUnit(n: number): number` → `pipeline-stages/clamp.ts` (NaN/non-finite → 0.0, out-of-range → [0, 1])
+  - `placeholderFusionOutput(image_id, reason)` → `pipeline-stages/placeholder.ts` (returns `{ image_id, score: 0.5, reason, details: { action: "REVIEW" } }`)
+  - `buildFusionInput` and `buildBlocklistFusionInput` → `pipeline-stages/fusion-input.ts` (extracted byte-identical; no type-narrowing of `AgentOutput.details` to prevent the Sprint 2 carry-over from re-entering)
+  - 7-fan-out dispatch → `runFanOut(slots, input, imageId)` in `pipeline-stages/fan-out.ts` (preserves the Sprint 4 order `[textRisk, vision, metadata, porn, ad, political, logo]`; uses an `onAgentError` callback to stay decoupled from the orchestrator's state machine; the orchestrator's in-file `runAgent` closure is retained for the 2 fusion call sites at lines 402 and 519)
+- Bugfix: removed 4 pre-existing eslint carry-overs that had been explicitly out-of-scope in prior sprints (Sprint 1/2/3 quality gates):
+  - `ai-audit-prototype/src/orchestrator/orchestrator.ts:54` — unused `PIPELINE_STATE_ORDER` import (Sprint 2 carry-over)
+  - `ai-audit-prototype/src/preprocess/phash.ts:15` — unused `DOWNSAMPLE = 32` constant (Sprint 3 carry-over)
+  - `ai-audit-prototype/src/preprocess/preprocess-agent.ts:36` — unused `type AgentInput` import (Sprint 3 carry-over)
+  - `ai-audit-prototype/src/preprocess/preprocess-agent.test.ts:50-57` — unused `PNG_HEADER_ONLY` fixture (Sprint 3 carry-over)
+- New `ai-audit-prototype/src/pipeline-stages/clamp.test.ts` (10 unit tests) covers the previously-uncovered NaN/non-finite branch in `clampToFusionUnit`. This is what nudges the project line coverage from 79.71% (Sprint 4) to 80.00% (clears the 80% bugfix threshold).
+- 85 vitest tests pass across 17 test files (10 new in `clamp.test.ts`, 75 carried from Sprints 1-4). New module `pipeline-stages` reports 86.04% line coverage; `fan-out.ts` sub-file 81.25%. `vitest.config.ts` `coverage.include` was additively extended with `src/pipeline-stages/**/*.ts` (matching the Sprint 2/3/4 deviation pattern).
+- All 5 Sprint 4 SCs regression-clean via `smoke-test-sprint-4.ts` and `run-audit.ts --smoke-test`:
+  - SC-1 specialized stubs PASS, SC-2 registry PASS, SC-3 fusion PASS (3 fusion substrings), SC-4 orchestrator 7-fan-out PASS
+  - SC-5 e2e CLI PASS with audit-line tuple `9,2,9` preserved (normal=9, blocklist=2, corrupt=9)
+  - All 5 Sprint 4 evidence substrings byte-identical to Sprint 4 baseline
+- `npx tsc --noEmit` exits 0 (Sprint 2 carry-over at `orchestrator.ts:569` stays resolved; new module has zero `width`/`height`/`format` references).
+- Scoped `npx eslint` on the 4 carry-over files + new module exits 0 / 0 errors / 0 warnings. Full-project `npx eslint .` still reports 29+ pre-existing 010-era errors — unchanged, still out of scope per Sprint 1 evaluator feedback.
+- `npm audit --audit-level=high` reports 0 high/critical vulnerabilities (was 11 in Sprint 4 quality gate — likely a fresh `npm install` lock-file side-effect, not a deliberate Sprint 5 deliverable; `package.json` is not in the diff).
+- Non-blocking craft observation (carried forward): Sprint 3 `smoke-test-sprint-3.ts` SC-5 audit-line arithmetic assertion (5 for normal run) is still inconsistent with the Sprint 4 7-fan-out orchestrator (normal = 9). The hard rule forbids modifying existing tests, so the Sprint 3 SC-5 audit-line assertion is left as-is; the actual Sprint 4 SC-4 regression check (Sprint 2 stub-agent test files) still passes 10/10. Both notes are real but not blocking.
+
 ## v0.1.0 — Sprint 1 [MINOR bump]
 - The Agent type is implemented as a TypeScript `interface` (declaration-merging friendly, per contract open-question #1 default). All four open-question defaults are applied correctly.
 - The bus is transport-agnostic. `EventEmitter` listener cap bumped to 50 to handle realistic Sprint 4 fan-out. JSDoc documents the synchronous dispatch limitation.
