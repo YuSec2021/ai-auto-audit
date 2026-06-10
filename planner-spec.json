@@ -1,0 +1,147 @@
+{
+  "product": "Image Moderation Agent (multi-layer, multi-agent pipeline that replaces the single Qwen VL call in vision-validator.ts with a 7-layer pipeline: Preprocess -> OCR + Text Risk | Vision | Metadata -> Specialized Agents -> Risk Fusion)",
+  "design_language": "N/A — CLI pipeline, no visual design surface",
+  "tech_stack": {
+    "frontend": "N/A (CLI pipeline only)",
+    "backend": "TypeScript (Node.js 25 ESM, tsx) with openai SDK (DashScope/dashscope.aliyuncs.com) for VL calls; sharp for image preprocessing; ONNX/PaddleOCR binary for local OCR (added in epic-2)",
+    "db": "N/A — file-based audit logs under ./logs/audit_*.log (existing); review queue persisted as JSON under ./logs/review-queue.jsonl (added in epic-6)",
+    "message_bus": "In-process EventEmitter behind a MessageBus interface (swappable to NATS/Kafka later); chosen over Kafka/NATS to avoid heavy infra for prototype",
+    "agents": "Preprocess (epic-1), OCR + Text Risk (epic-2), Vision (epic-3), Metadata (epic-4), Porn/Ad/Political/Logo specialized (epic-5), Risk Fusion (epic-6)",
+    "text_risk": "AC automaton (Aho-Corasick) + DFA tokenizer + regex matcher; pure TypeScript, no new npm deps; wordlist at src/text-risk/wordlist/wordlist.yaml (YAML, versioned in repo)"
+  },
+  "verification": {
+    "mode": "cli",
+    "base_url": "N/A",
+    "command": "node --import tsx ai-audit-prototype/scripts/run-audit.ts --smoke-test",
+    "smoke_test_scenarios": [
+      "preprocess-1: input a remote JPEG, assert hash + compressed dataURL are produced",
+      "pipeline-1: stub all agents, assert Preprocess -> (parallel) -> Fusion state transitions",
+      "message-bus-1: publish a synthetic agent message, assert a subscriber receives the typed payload"
+    ]
+  },
+  "features": [
+    "Agent base interface (id, version, init, run, healthcheck) that all 10+ agents implement",
+    "MessageBus abstraction (publish, subscribe, request/response) backed by EventEmitter, with a swappable transport boundary",
+    "Pipeline orchestrator with explicit state machine (init -> preprocess -> parallel-fan-out -> fan-in -> fusion -> done/cancelled/failed) and cancel/resume hooks",
+    "Preprocess Agent: format normalization, dimension/hash output, integration with existing image-compressor.ts, sharp metadata extraction",
+    "Image hash blocklist check (MD5 + pHash seeds) for known-bad image fast-path",
+    "Text Risk Agent input contract (OCR-ready) and a no-op stub that epic-2 will replace with the real AC-automaton + DFA + regex matcher",
+    "Vision Agent input contract (image + text context) and a no-op stub that epic-3 will replace with the DashScope Qwen3-VL call",
+    "Metadata Agent input contract (image bytes) and a no-op stub that epic-4 will replace with the EXIF/GPS/AI-gen detector",
+    "Specialized sub-agent slot interface (Porn/Ad/Political/Logo) with a registry pattern; stubs included for later epics to implement",
+    "Risk Fusion Agent that consumes all per-layer scores, applies a configurable weighted formula, and emits a final risk_score + action (PASS/REVIEW/REJECT)",
+    "Audit-log emission for every pipeline run: image_id, agent, score, reason, elapsed_ms — persisted via existing file logger",
+    "End-to-end CLI entrypoint (run-audit.ts --smoke-test) that runs the orchestrator against fixture images and asserts pipeline completion",
+    "Real Text Risk agent (AC automaton + DFA + regex matcher, OCR-fed, replaces Sprint 2 stub) — epic-2"
+  ],
+  "sprints": [
+    {
+      "id": 1,
+      "epic_id": "epic-1",
+      "title": "Agent interface & message bus foundation",
+      "features": [
+        "Agent base interface (id, version, init, run, healthcheck) that all 10+ agents implement",
+        "MessageBus abstraction (publish, subscribe, request/response) backed by EventEmitter, with a swappable transport boundary",
+        "Audit-log emission for every pipeline run: image_id, agent, score, reason, elapsed_ms — persisted via existing file logger"
+      ]
+    },
+    {
+      "id": 2,
+      "epic_id": "epic-1",
+      "title": "Pipeline orchestrator & state machine",
+      "features": [
+        "Pipeline orchestrator with explicit state machine (init -> preprocess -> parallel-fan-out -> fan-in -> fusion -> done/cancelled/failed) and cancel/resume hooks",
+        "Text Risk Agent input contract (OCR-ready) and a no-op stub that epic-2 will replace with the real AC-automaton + DFA + regex matcher",
+        "Vision Agent input contract (image + text context) and a no-op stub that epic-3 will replace with the DashScope Qwen3-VL call",
+        "Metadata Agent input contract (image bytes) and a no-op stub that epic-4 will replace with the EXIF/GPS/AI-gen detector"
+      ]
+    },
+    {
+      "id": 3,
+      "epic_id": "epic-1",
+      "title": "Preprocess Agent implementation",
+      "features": [
+        "Preprocess Agent: format normalization, dimension/hash output, integration with existing image-compressor.ts, sharp metadata extraction",
+        "Image hash blocklist check (MD5 + pHash seeds) for known-bad image fast-path"
+      ]
+    },
+    {
+      "id": 4,
+      "epic_id": "epic-1",
+      "title": "Risk Fusion stub & end-to-end smoke test",
+      "features": [
+        "Specialized sub-agent slot interface (Porn/Ad/Political/Logo) with a registry pattern; stubs included for later epics to implement",
+        "Risk Fusion Agent that consumes all per-layer scores, applies a configurable weighted formula, and emits a final risk_score + action (PASS/REVIEW/REJECT)",
+        "End-to-end CLI entrypoint (run-audit.ts --smoke-test) that runs the orchestrator against fixture images and asserts pipeline completion"
+      ]
+    },
+    {
+      "id": 5,
+      "epic_id": "epic-1",
+      "title": "Tech debt cleanup (orchestrator refactor + 4 carry-over removals)",
+      "features": [
+        "Refactor: extract 7-fan-out dispatch, per-layer clamping, placeholder-fusion, and buildFusionInput helpers from orchestrator.ts into a new pipeline-stages/ module",
+        "Bugfix: remove PIPELINE_STATE_ORDER unused import at orchestrator.ts:54 (Sprint 2 carry-over)",
+        "Bugfix: remove 3 Sprint 3 eslint dead-code issues (phash.ts:15 DOWNSAMPLE, preprocess-agent.test.ts:50 PNG_HEADER_ONLY, preprocess-agent.ts:36 AgentInput)"
+      ]
+    },
+    {
+      "id": 6,
+      "epic_id": "epic-2",
+      "title": "Text Risk matcher core (AC automaton + DFA + regex, pure TS)",
+      "features": [
+        "Pure TypeScript library under ai-audit-prototype/src/text-risk/ (no IO, no new npm dependencies)",
+        "AC automaton (Aho-Corasick) for one-pass multi-pattern exact matching",
+        "DFA tokenizer for input normalization (case folding, fullwidth/halfwidth, whitespace)",
+        "Regex matcher for variable-shape patterns (per-entry match: regex field)",
+        "Structured wordlist at ai-audit-prototype/src/text-risk/wordlist/wordlist.yaml (YAML format, versioned in repo)",
+        "Wordlist migrated from 010-era prohibited-words.ts (45 entries: 极限词 13, 虚假宣传 4, 平台违规 20, 促销诱导 8; 禁售商品 removed 2026-06-10)",
+        "Match result: { matched: WordlistMatch[]; total: number; score: number } with score in [0,1] = clamp01(matched.length / total_entries)"
+      ]
+    },
+    {
+      "id": 7,
+      "epic_id": "epic-2",
+      "title": "OCR stage integration (PaddleOCR binary via Python HTTP service)",
+      "features": [
+        "PaddleOCR pip package installed via init.sh; Python HTTP service on http://localhost:8866",
+        "New ai-audit-prototype/src/ocr/ module: client.ts (HTTP client), preprocess.ts (image → base64 for PaddleOCR), agent.ts (OcrAgent implementing Agent interface, id=ocr-agent-007, version=0.7.0)",
+        "Orchestrator state machine: introduce 'ocr' state between preprocess and the 7-fan-out (state-machine.ts updated to include ocr → parallel-fan-out transition)",
+        "Audit-line tuple preserved: normal 9 → 10 (1 preprocess + 1 ocr + 7 fan-out + 1 fusion); blocklist 2 → 3 (1 preprocess + 1 ocr + 1 fusion, 7 fan-out skipped); corrupt 9 → 10",
+        "Failure degradation: if PaddleOCR unavailable / timeout, ocr-agent returns { score: 0, reason: 'ocr-unavailable' }; orchestrator continues (does not block the fan-out)",
+        "Hermetic smoke runner: 3 inline image fixtures (white-bg standard text / artistic text / textless product image) with expected ocr_text substrings",
+        "init.sh updated to install paddleocr + paddlepaddle + start the service (idempotent, fail-fast)"
+      ]
+    },
+    {
+      "id": 8,
+      "epic_id": "epic-2",
+      "title": "TextRiskAgent real implementation (replace Sprint 2 stub; consume Sprint 6 matcher + Sprint 7 OCR output)",
+      "features": [
+        "Replace Sprint 2 TextRiskAgent stub body with real implementation: load wordlist.yaml, run AC + regex matcher against the input ocr_text, return AgentOutput with score = matched_weighted_score in [0,1] and details.matched_words = array of { word, category, severity, span }",
+        "Severity-weighted score: 原则性错误 = 1.0, 一般错误 = 0.6, 提示 = 0.2; final score = clamp01(0.4 * max_severity + 0.6 * min(1, sum_severity / 3)) — concrete formula negotiated in sprint 8 contract",
+        "TextRiskAgent's input contract unchanged from Sprint 2: AgentInput & { ocr_text: string; bboxes: ReadonlyArray<unknown> } (bboxes still TBD; epic-7 can fill in)",
+        "Orchestrator's 7-fan-out unchanged: the textRisk slot is the same; only the agent body changes. Other 6 agents (vision/metadata/porn/ad/political/logo) keep their Sprint 2/4 stubs",
+        "Sprint 4 evidence substrings preserved: SC-1 specialized stubs PASS, SC-2 registry PASS, SC-3 fusion PASS, SC-4 orchestrator 7-fan-out PASS",
+        "New SC-5 contract asserts: the Sprint 4 audit-line tuple is updated to 10,3,10 (after Sprint 7 added the ocr stage); all Sprint 4 evidence substrings are still byte-identical modulo the audit-line tuple",
+        "frozen FUSION_CONFIG and RiskFusionAgent unchanged — the new text_risk layer score is in the same [0,1] range as the stub's 0.5, so fusion behavior is continuous",
+        "Coverage threshold: 80% (this is a feature sprint under epic-2, but the project is currently at 80% from Sprint 5; we keep the bar to maintain the gain)"
+      ]
+    },
+    {
+      "id": 9,
+      "epic_id": "epic-2",
+      "title": "Unify prohibited-words library: single source of truth (absorb 17 uncommitted 'delete 禁售商品' edits)",
+      "features": [
+        "Single source of truth: ai-audit-prototype/src/text-risk/wordlist/wordlist.yaml — the structured wordlist introduced in Sprint 6 (45 entries after 禁售商品 category removal: 极限词 13, 虚假宣传 4, 平台违规 20, 促销诱导 8)",
+        "One TypeScript loader module that re-exports the parsed wordlist as a typed structure (extend ai-audit-prototype/src/text-risk/wordlist.ts with loadWordlistFromDefault() / export a typed PROHIBITED_WORDS array derived from the YAML)",
+        "One consumer-facing module (extend ai-audit-prototype/src/text-risk/index.ts barrel) that the engine, LLM helper, validators, and scripts import — exports a PROHIBITED_WORDS string[] (sorted, deduplicated) and a WordlistEntry[] derived from the YAML",
+        "Absorb the 17 uncommitted files from the 'delete 禁售商品' ad-hoc change: prohibited-words.ts (010-era, see Out-of-scope), wordlist.yaml, wordlist.test.ts, audit-engine.ts, audit-types.ts, App.tsx, babel-plugin-jsx-source-location.cjs, ErrorBoundary.tsx, AuditContext.tsx, ThemeContext.tsx, exporters.ts, utils.ts, Home.tsx, NotFound.tsx, TaskDetailPage.tsx, TasksPage.tsx, UploadTaskPage.tsx — sprint 9 design supersedes those ad-hoc edits",
+        "Remove all 'do not change' / 'keep in sync' / '已迁移至' cross-references between consumers (the YAML is the source; no consumer 'owns' the list anymore)",
+        "Single test that asserts the new module matches the YAML (no need to retest 17 consumers individually)",
+        "All 010-era scripts and legacy files remain unchanged (scripts/audit-5-26.js, scripts/audit-full-rules.js, audit_rules.js, auditor.js, claude_audit.js, image_audit.js, scripts/.audit_vision_cache.json — preserved untouched)",
+        "Out of scope: YAML schema, YAML per-entry fields, AC automaton / DFA / regex matcher behavior, Sprint 6 test fixtures — all preserved verbatim"
+      ]
+    }
+  ]
+}

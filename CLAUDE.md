@@ -84,3 +84,15 @@ Two persistent failure modes this harness prevents:
 ---
 
 *Based on Anthropic's "Harness Design for Long-Running Application Development"*
+
+## Active Technologies
+- Node.js (ES Modules) - 无需新依赖，使用内置 `fs`、`path`、`crypto` 模块 + 无新增依赖，使用Node.js内置模块实现日志系统 (003-add-logging-trace)
+- 本地文件系统 `./logs/audit_YYYYMMDD_HHMMSS.log` (003-add-logging-trace)
+- TypeScript (tsx ESM, Node.js 25) + `openai` SDK (DashScope/dashscope.aliyuncs.com), `xlsx` (004-fix-brand-audit-rules)
+- N/A (brand-list.json asset file, no DB) (004-fix-brand-audit-rules)
+- TypeScript (tsx ESM, Node.js 25) + openai SDK (dashscope), xlsx (008-llm-r16-check)
+- N/A (无数据库，使用本地品牌库文件 brand-list.json) (008-llm-r16-check)
+- N/A (无数据库) (009-optional-field-validation)
+
+## Recent Changes
+- 003-add-logging-trace: Added Node.js (ES Modules) - 无需新依赖，使用内置 `fs`、`path`、`crypto` 模块 + 无新增依赖，使用Node.js内置模块实现日志系统
