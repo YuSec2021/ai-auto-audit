@@ -20,6 +20,9 @@
 *.xltm
 *.csv
 
+# --- Images (project policy 2026-06-10: ignore all PNGs) ---
+*.png
+
 # --- Build / runtime artifacts ---
 node_modules/
 dist/
