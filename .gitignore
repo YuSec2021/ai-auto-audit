@@ -84,3 +84,38 @@ specs/
 .cache/
 .tmp/
 tmp/
+
+# ============================================================
+# Sensitive business data — pre-repo-deletion cleanup 2026-06-10
+# User has decided to delete the entire repository. These files
+# are excluded from any future git operations in this repo.
+# Categories: business data assets, rule/wordlist definitions,
+# 010-era scripts, and internal architecture/agent docs.
+# ============================================================
+
+# --- Business data assets (suppliers / categories / brands / cache) ---
+vendor.json
+category.json
+ai-audit-prototype/src/assets/brand-list.json
+scripts/.audit_vision_cache.json
+
+# --- Rule / wordlist definitions (business-sensitive content) ---
+audit_rules.js
+scripts/audit-full-rules.js
+ai-audit-prototype/src/lib/audit-engine.ts
+ai-audit-prototype/src/lib/prohibited-words.ts
+ai-audit-prototype/src/text-risk/wordlist/wordlist.yaml
+
+# --- 010-era scripts reading the above assets ---
+auditor.js
+claude_audit.js
+image_audit.js
+category_mapper.js
+get_category_path.js
+
+# --- Internal architecture / agent documentation ---
+商品审核系统架构.md
+picture_audit_agent.md
+
+# --- Hardcoded webhook fallback in source (security hot-spot) ---
+ai-audit-prototype/src/lib/wecom-notifier.ts
