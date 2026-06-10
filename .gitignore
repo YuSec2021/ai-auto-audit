@@ -4,6 +4,11 @@
 #   - ALL Excel files are ignored (per project policy 2026-06-10)
 #   - The 3 previously-tracked xlsx files are untracked via
 #     `git rm --cached` in the same commit that adds this .gitignore
+#   - Hidden runtime / tool directories (commit-agnostic):
+#     .sprintfoundry/ SprintFoundry three-agent harness state
+#     .claude/        Claude Code session/tooling (skills live in
+#                     user install, not in this repo)
+#     .playwright-mcp/ Playwright MCP server capture artifacts
 # ============================================================
 
 # --- Excel / spreadsheet (project policy: ignore all) ---
@@ -52,14 +57,9 @@ Thumbs.db
 .vscode/
 .idea/
 
-# --- SprintFoundry runtime state (commit-agnostic) ---
-.sprintfoundry/eval-trigger.txt
-.sprintfoundry/project-root
-.sprintfoundry/eval-results/
-.sprintfoundry/quality-gates/
-.sprintfoundry/scope-classification.json
-.sprintfoundry/sprint-fence.json
-ai-audit-prototype/.sprintfoundry/
+# --- Hidden runtime / tool directories (added 2026-06-10) ---
+.sprintfoundry/
+.claude/
 
 # --- Raw data samples (not source code) ---
 5-9/
