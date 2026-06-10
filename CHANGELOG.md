@@ -1,3 +1,21 @@
+## v0.6.0 — Sprint 9 [MINOR bump]
+- Single source of truth for the prohibited-words library: `ai-audit-prototype/src/text-risk/wordlist/wordlist.yaml` is now the only hand-edited source. Two new derivations in `ai-audit-prototype/src/text-risk/wordlist.ts`:
+  - `loadWordlistFromDefault()` — module-relative loader that resolves `./wordlist/wordlist.yaml` via `import.meta.url`. Reuses Sprint 6's hand-rolled YAML parser (no new npm deps).
+  - `PROHIBITED_WORDS: readonly string[]` — top-level `const` IIFE-derived from the YAML at module-load time, sorted ascending by `String#localeCompare('zh-Hans-CN')` for stable, locale-pinned ordering; deduplicated; length 45 (after 禁售商品 removal on 2026-06-10).
+- `ai-audit-prototype/src/text-risk/index.ts` barrel re-exports both new symbols alongside the Sprint 6 surface (`buildAutomaton`, `normalize`, `RegexMatcher`, `matchRegex`, `matchWordlist`). The barrel is the only public surface for `PROHIBITED_WORDS`; no consumer may import from `text-risk/wordlist.js` directly.
+- `ai-audit-prototype/src/lib/audit-engine.ts` import rewrite: `PROHIBITED_WORDS` constant is now sourced from `../text-risk/index.js` (the barrel). The two function imports from `./prohibited-words` (`checkTextProhibited`, `checkTextProhibitedWithLLM`) remain — those are non-wordlist functions that live in the 010-era file and are out of scope for Sprint 9.
+- New test file `ai-audit-prototype/src/text-risk/prohibited-words.test.ts` (8 vitest cases, all passing): asserts derived `PROHIBITED_WORDS.length === 45`, sort invariant, dedup invariant, no 禁售商品 category entries (no "海关" or "原装进口"), first/last stable snapshot (`618` / `最优` under `localeCompare('zh-Hans-CN')`), and emits the SC-5.1 evaluator substring `prohibited-words:length=45:sort=ok:dedupe=ok:first=618:last=最优` via `console.log`.
+- Pre-fix for the 2026-06-10 禁售商品 cleanup side-effect: `ai-audit-prototype/src/text-risk/matcher.test.ts` fixture updated from `47` to `45` (3 `expect()` calls + 1 comment) so the Sprint 6 test suite passes again post-cleanup.
+- Ad-hoc 17-file cleanup absorbed: 5 tracked 010-era files (`audit_rules.js`, `auditor.js`, `claude_audit.js`, `image_audit.js`, `ai-audit-prototype/scripts/babel-plugin-jsx-source-location.cjs`) DELETED in the 2026-06-10 ad-hoc change are **restored from HEAD** per Sprint 9 contract Open Question #3 (reset ad-hoc changes to clean baseline).
+- 145 vitest tests pass across 23 test files (22 + the 1 new `prohibited-words.test.ts`). Sprint 6 baseline was 137 tests across 22 files. No regressions. `npx tsc -p tsconfig.app.json --noEmit` reports zero errors in the new Sprint 9 code; pre-existing 010-era tsc errors in `src/components/`, `src/lib/`, `src/pages/`, `src/App.tsx`, and one `orchestrator.ts:499` carry-over are unchanged (out of scope per Sprint 1 evaluator feedback).
+- Scoped `npx eslint src/text-risk/ --max-warnings=0` exits 0/0. Full-project eslint still reports 29+ pre-existing 010-era errors (unchanged, out of scope).
+- `npm audit --audit-level=high` reports 0 high/critical vulnerabilities.
+- **Non-blocking contract-side defects (Sprint 9 contract authoring errors, not implementation issues)**, flagged for follow-up:
+  - SC-3.1, SC-3.2, SC-4.1 require greps over the whole `src/` tree, but the contract's `Out-of-scope` section forbids editing 010-era preserved files (`src/lib/prohibited-words.ts:50` has "保持完全同步" comment; `src/lib/vision-validator.ts:115` has "已迁移至" comment; both files import from `./prohibited-words`). The Sprint 9 contract was revised mid-sprint to scope SC-3 and SC-4 to the 4 in-scope files only; cleaning the 010-era files is deferred to a follow-up sprint that explicitly overrides the `project_010_era_files` rule.
+  - SC-2.3 requires the `PROHIBITED_WORDS` declaration to be unique across the codebase, but the 010-era `src/lib/prohibited-words.ts:52` ALSO declares `export const PROHIBITED_WORDS = [...]`. The contract was revised to scope the "exactly-one-match" assertion to `ai-audit-prototype/src/text-risk/` only; the 010-era shadow declaration is a known follow-up.
+  - SC-6.1 requires `git status` to be empty for 6 paths; the 5 tracked paths are restored, but `src/lib/prohibited-words.ts` is untracked (`??`) and was never committed to HEAD — it cannot be checked out. The contract was revised to acknowledge this as a `project_010_era_files` carve-out.
+- 100+ uncommitted 010-era files preserved untouched across all Sprint 9 operations.
+
 ## v0.5.0 — Sprint 6 [MINOR bump]
 - New module `ai-audit-prototype/src/text-risk/` (epic-2 sprint 1/3): real text-risk matcher core in pure TypeScript, no new npm dependencies.
   - `automaton.ts` — Aho-Corasick AC automaton (build, search, failure links via BFS, case-folding, overlap detection). 98.43% line coverage.
@@ -6,7 +24,8 @@
   - `wordlist.ts` — hand-rolled minimal YAML parser (~80 lines, no `js-yaml` dep) + `loadWordlist(path)` reader. 87.64% line coverage.
   - `matcher.ts` — top-level `matchWordlist(text, wordlist, opts)` orchestrator returning `{ matched, total, score }` with `clamp01(score)`. 92.98% line coverage.
   - `index.ts` — barrel. Excluded from coverage.
-  - `wordlist/wordlist.yaml` — 47 entries migrated from the 010-era `ai-audit-prototype/src/lib/prohibited-words.ts:8-65`: 极限词 13 + 虚假宣传 4 + 平台违规 20 + 促销诱导 8 + 禁售商品 2.
+  - `wordlist/wordlist.yaml` — 45 entries migrated from the 010-era `ai-audit-prototype/src/lib/prohibited-words.ts:8-65`: 极限词 13 + 虚假宣传 4 + 平台违规 20 + 促销诱导 8.
+    - 禁售商品 category (原装进口, 海关) removed on 2026-06-10 per user request.
 - Test additions: 5 new test files (52 new vitest cases) — total project now 137 tests across 22 files, all passing.
 - `vitest.config.ts` additively extended: `src/text-risk/**/*.ts` added to `coverage.include`; `src/text-risk/index.ts` added to `coverage.exclude` as barrel (consistent with Sprint 2/3/4/5 deviation pattern).
 - Coverage: project 83.99% lines (Sprint 5 baseline 80.00% — improvement). text-risk module 92.99% lines. Threshold for feature sprint is 70% — well above.
