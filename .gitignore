@@ -66,10 +66,14 @@ ai-audit-prototype/.sprintfoundry/
 异常SKU*/
 已审核*/
 未审核*/
+待审核_split/
 *_combined_output.xlsx
 *_output.xlsx
 *_output.js
 *_split/
+
+# --- Spec-Kit scaffold (deleted 2026-06-10) ---
+.specify/
 
 # --- Misc project noise ---
 .vite/
