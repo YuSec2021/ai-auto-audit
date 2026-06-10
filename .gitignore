@@ -1,0 +1,78 @@
+# ============================================================
+# ai-auto-audit — Root .gitignore
+# Hard rules:
+#   - ALL Excel files are ignored (per project policy 2026-06-10)
+#   - The 3 previously-tracked xlsx files are untracked via
+#     `git rm --cached` in the same commit that adds this .gitignore
+# ============================================================
+
+# --- Excel / spreadsheet (project policy: ignore all) ---
+*.xlsx
+*.xls
+*.xlsb
+*.xlsm
+*.xltx
+*.xltm
+*.csv
+
+# --- Build / runtime artifacts ---
+node_modules/
+dist/
+build/
+out/
+coverage/
+*.tsbuildinfo
+
+# --- Logs (project + tooling) ---
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- Test / e2e artifacts ---
+playwright-report/
+test-results/
+.screenshots/
+.playwright-mcp/
+playwright-debug.png
+
+# --- Environment / secrets ---
+.env
+.env.local
+.env.*.local
+ai-audit-prototype/.env
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
+
+# --- SprintFoundry runtime state (commit-agnostic) ---
+.sprintfoundry/eval-trigger.txt
+.sprintfoundry/project-root
+.sprintfoundry/eval-results/
+.sprintfoundry/quality-gates/
+.sprintfoundry/scope-classification.json
+.sprintfoundry/sprint-fence.json
+ai-audit-prototype/.sprintfoundry/
+
+# --- Raw data samples (not source code) ---
+5-9/
+异常SKU*/
+已审核*/
+未审核*/
+*_combined_output.xlsx
+*_output.xlsx
+*_output.js
+*_split/
+
+# --- Misc project noise ---
+.vite/
+.cache/
+.tmp/
+tmp/
