@@ -1,7 +1,11 @@
 # 安全与凭证管理规范
 
-> 状态：2026-06-10 加固版
-> 配套文件：`ai-audit-prototype/.env` (gitignored) + `ai-audit-prototype/.env.example` (committed)
+> 状态：2026-06-11 历史脱敏完成版
+> 配套文件：`.env` (gitignored) + `.env.example` (committed) + 本文件
+>
+> **2026-06-11 重大更新**：已对 git 全部历史执行 `git-filter-repo --invert-paths` 脱敏，
+> 删除 7 个 `codex/sprint-*` 历史分支，仓库体积从 50MB+ 收缩到 1.8MB。
+> 详见 §五「历史脱敏审计」。
 
 ---
 
@@ -103,11 +107,87 @@
 ## 五、配套文件
 
 ```
-ai-audit-prototype/
+.
 ├── .env              # 真实凭证 (gitignored)
 ├── .env.example      # 凭证模板 (committed, 无真实值)
-SECURITY.md           # 本文件
-.gitignore            # 屏蔽所有 .env* 变体
+├── SECURITY.md       # 本文件
+└── .gitignore        # 屏蔽所有 .env* 变体
+
+新增凭证时同步：① 更新 `.env.example` ② 更新本文件 §一/§二
+
+---
+
+## 六、历史脱敏审计（2026-06-11）
+
+### 6.1 背景
+
+用户已删除远端仓库，但本地 git 历史的 35 个 commit 仍含 9 类敏感文件的旧 blob。
+为了把「当前代码」作为干净的最新分支分发到任何新远端，对全历史执行了
+`git-filter-repo --invert-paths` + `--replace-refs delete-no-add`。
+
+### 6.2 脱敏范围
+
+| 类别 | 路径数 | 说明 |
+|---|---|---|
+| 业务数据资产 | 4 | vendor.json、category.json、brand-list.json、audit_vision_cache.json |
+| 规则 / 词表 | 4 | audit-engine.ts、prohibited-words.ts、wordlist.yaml、audit-full-rules.js |
+| 010-era 脚本 | 5 | audit_rules.js、auditor.js、claude_audit.js、image_audit.js、category_mapper.js、get_category_path.js |
+| 内部文档 | 2 | 商品审核系统架构.md、picture_audit_agent.md |
+| 硬编码密钥 | 1 | src/lib/wecom-notifier.ts（旧版含 webhook fallback） |
+| 旧 .env | 2 | .env、.env.example（ai-audit-prototype/ 旧路径） |
+| 整个旧目录 | 100+ | `ai-audit-prototype/` 整棵子树（防止遗漏的旧 blob） |
+
+### 6.3 执行步骤
+
+```bash
+# 1. 解跟踪当前仍 tracked 的 9 个敏感文件
+git rm --cached <9 files>
+git commit --no-gpg-sign -m "chore(security): untrack 9 sensitive files"
+
+# 2. 第一次 filter-repo：按显式路径清单
+git-filter-repo --invert-paths \
+  --path vendor.json --path category.json ... (23 paths) \
+  --replace-refs delete-no-add --force
+
+# 3. 第二次 filter-repo：补漏 — 整棵 ai-audit-prototype/ 子树
+git-filter-repo --invert-paths --path ai-audit-prototype/ --force
+
+# 4. 删除 7 个 codex/sprint-* 历史分支
+git branch -D codex/sprint-{1,2,3,4,5,6,9}-*
+
+# 5. 强制 GC
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+```
+
+### 6.4 脱敏后核验
+
+| 校验项 | 结果 |
+|---|---|
+| `git log --all` 仍可显示完整 35 commit | ✅ 历史结构保留 |
+| 9 个当前敏感文件在 HEAD 不再 tracked | ✅ 由 .gitignore 永久屏蔽 |
+| 9 个文件仍在工作树（未误删） | ✅ 大小、内容完整 |
+| 7 个 `codex/sprint-*` 分支已删除 | ✅ 仅 `main` 留存 |
+| `.git` 体积 | 50MB+ → **1.8MB**（缩减 96%）|
+| Webhook key (`bfd69058...`) 在所有可达 blob | ✅ 0 命中 |
+| 内部 IP `192.168.100.100` 在所有可达 blob | ✅ 0 命中 |
+| OSS bucket `uece-sanheng-public` 在所有可达 blob | ✅ 0 命中 |
+| Aliyun AK 前缀 `LTAI5t` 在所有可达 blob | ✅ 0 命中 |
+| 内部域名 `kyrie` 在所有可达 blob | ✅ 0 命中 |
+| `git fsck` 完整性 | ✅ 0 dangling |
+| `.env.example` 中的占位符 (`WECOM_WEBHOOK_URL` 等) | ✅ 保留（无真实值）|
+
+### 6.5 仍需人工处理的项
+
+下列风险**脱敏无法消除**——任何持有旧 commit 历史的本地 clone 仍能看到原始 blob：
+
+| 风险 | 处理方 | 紧迫度 |
+|---|---|---|
+| 5 项生产凭证（见 §二） | 京东开放平台 / 阿里云 / 企业微信 各自后台轮换 | **24h 内** |
+| 内网 IP / 域名 | 运维层面更换 IP/域名 | 1 周内 |
+| 旧 clone 销毁 | `rm -rf <old-clone-path>` 后重新 clone | 立即 |
+| `/tmp/ai-audit-backup/` | 物理销毁该备份目录 | 立即 |
+| 企业微信 webhook 旧 key | 在企业微信群机器人后台删除 | 24h 内 |
 ```
 
 新增凭证时同步：① 更新 `.env.example` ② 更新本文件 §一/§二
