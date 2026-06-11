@@ -2,7 +2,29 @@
 
 > 面向企业内部商品上架流程的智能审核平台原型 —— 以 SKU 为最小处理单元，以 Agent 编排为流程核心，以规则引擎和多模态模型为执行器。
 
-![status](https://img.shields.io/badge/version-v0.6.0-blue) ![status](https://img.shields.io/badge/sprint-Sprint%209%20PASS-brightgreen) ![status](https://img.shields.io/badge/license-internal-lightgrey)
+![status](https://img.shields.io/badge/version-v0.5.0-blue) ![status](https://img.shields.io/badge/sprint-Sprint%209%20PASS-brightgreen) ![status](https://img.shields.io/badge/license-internal-lightgrey)
+
+---
+
+## TL;DR
+
+| 维度             | 状态                                                                |
+| ---------------- | ------------------------------------------------------------------- |
+| 当前版本         | **v0.5.0**（最近一次功能 Sprint 是 Sprint 9）                       |
+| 已完成 Sprint    | 7 个（Sprint 1-6 + Sprint 9；Sprint 7/8 延期）                      |
+| CLI 烟测         | ✅ Hermetic，30 秒内跑通（详见 §3.2）                                |
+| 测试套件         | 145 vitest 用例 / 23 文件 / 行覆盖率 83.99%（v0.5.0 基线）          |
+| UI 前端          | ⚠️ 暂不可用（`pages/` 已清理,App.tsx 仍依赖旧路由,后续 Sprint 重建）|
+| 凭证管理         | 11 项凭证统一在 `.env` + `.env.example`，详见 SECURITY.md           |
+| 历史脱敏         | 2026-06-11 对全部 35 个 commit 做了 `git-filter-repo --invert-paths` |
+
+**30 秒验证烟测**：
+
+```bash
+pnpm install
+node --import tsx scripts/run-audit.ts --smoke-test
+# 期望最后一行: SC-5: PASS
+```
 
 ---
 
@@ -40,19 +62,19 @@
 
 ```
 ai-auto-audit/
-├── src/                       # 应用源码（Agent 编排 + 业务规则 + UI）
-├── scripts/                   # CLI 入口（run-audit.ts 与 4 个 Sprint smoke test）
-├── docs/                      # 业务/产品文档（架构设计、PRD）
+├── src/                       # 应用源码（Agent 编排 + UI 基座）
+├── scripts/                   # CLI 入口（run-audit.ts + 4 个 Sprint smoke test）
+├── docs/                      # 业务/产品文档
 │   ├── 商品审核系统架构.md
 │   └── 商品审核系统PRD.md
 ├── logs/                      # 运行时日志（gitignored；audit_*.log / review-queue.jsonl）
 │
 ├── .env                       # 真实凭证（gitignored，单源；11 个键见 SECURITY.md §一）
 ├── .env.example               # 凭证模板（committed；占位符）
-├── SECURITY.md                # 凭证管理与脱敏审计（11 项凭证 + 轮换流程 + §六 历史脱敏）
+├── SECURITY.md                # 凭证管理与脱敏审计
 │
-├── package.json               # 工作区根 package（含 audit / vitest / lint scripts）
-├── tsconfig.json              # TypeScript 多项目配置（tsconfig.app / tsconfig.node）
+├── package.json               # 工作区根 package（audit / vitest / lint scripts）
+├── tsconfig.json              # TypeScript 多项目配置
 ├── vitest.config.ts           # Vitest 配置（145 用例 / 23 文件）
 ├── eslint.config.js           # ESLint 9 flat config
 ├── index.html                 # Vite 入口
@@ -60,13 +82,10 @@ ai-auto-audit/
 │
 ├── AGENT.md                   # Agent 行为规范（spec → plan → tasks → implement → evaluate）
 ├── CLAUDE.md                  # Claude 执行契约 + Harness 设计
-├── MEMORY.md                  # 项目持久记忆（用户授权 / 项目状态 / 反馈 / 引用）
+├── MEMORY.md                  # 项目持久记忆
 ├── planner-spec.json          # 总产品规划（Sprint 拆分与验收标准）
-├── CHANGELOG.md               # 版本变更日志（v0.1.0 → v0.5.0 + 2026-06 housekeeping）
+├── CHANGELOG.md               # 版本变更日志
 ├── VERSION                    # 当前版本号（0.5.0）
-│
-├── vendor.json                # 供应商配置（gitignored，业务资产）
-├── category.json              # 类目树（gitignored，业务资产）
 │
 └── .sprintfoundry/            # SprintFoundry 三 Agent 编排运行时状态（gitignored）
 ```
@@ -77,8 +96,8 @@ ai-auto-audit/
 | --------------------------------------------- | ----------------------------- |
 | `src/assets/brand-list.json`                  | 品牌库（27MB）                |
 | `src/lib/wecom-notifier.ts`                   | 企业微信通知                  |
-| `src/text-risk/wordlist/wordlist.yaml`        | 违禁词词表                    |
-| `scripts/.audit_vision_cache.json`            | 视觉审核缓存                  |
+| `src/text-risk/wordlist/wordlist.yaml`        | 违禁词词表（被 wordlist.ts 引用）|
+| `scripts/.audit_vision_cache.json`            | 视觉审核缓存（自动重建）      |
 
 > 这些文件保留在工作树是因为本地开发需要它们；新协作者通过 `.env.example` 和 `SECURITY.md §四` 即可恢复运行环境。
 
@@ -103,7 +122,7 @@ src/
 │   └── index.ts               # 桶装出口
 │
 ├── pipeline-stages/           # 编排内部阶段（从 orchestrator 抽离，Sprint 5）
-│   ├── fan-out.ts             # 7 路并行分发：[textRisk, vision, metadata, porn, ad, political, logo]
+│   ├── fan-out.ts             # 7 路并行分发
 │   ├── fusion-input.ts        # 构造融合输入
 │   ├── placeholder.ts         # 占位融合输出
 │   ├── clamp.ts               # 数值归一化
@@ -116,20 +135,19 @@ src/
 │   ├── phash.ts               # 感知哈希（手写，无 native 依赖）
 │   └── index.ts               # 桶装出口
 │
-├── text-risk/                 # 文字风险核心（Sprint 6/9，epic-2 sprint 1/3）
+├── text-risk/                 # 文字风险核心（Sprint 6/9）
 │   ├── automaton.ts           # Aho-Corasick 多模式匹配
 │   ├── dfa.ts                 # 归一化（大小写/全半角/空白）
 │   ├── regex-matcher.ts       # 正则匹配（带缓存）
 │   ├── matcher.ts             # 顶层 matchWordlist(text, wordlist)
 │   ├── wordlist.ts            # YAML 解析 + loadWordlistFromDefault() + PROHIBITED_WORDS 派生
 │   ├── index.ts               # 桶装出口（唯一公开面）
-│   ├── wordlist/
-│   │   └── wordlist.yaml      # 违禁词库（5 类 45 条，唯一手编源，gitignored）
-│   └── *.test.ts              # vitest 用例（automaton / dfa / matcher / regex-matcher / wordlist / prohibited-words）
+│   ├── wordlist/wordlist.yaml # 违禁词库（5 类 45 条，唯一手编源，gitignored）
+│   └── *.test.ts              # vitest 用例
 │
 ├── fusion/                    # 风险融合（Sprint 4）
 │   ├── risk-fusion-agent.ts   # 7 层加权公式 + 阈值映射（PASS/REVIEW/REJECT）
-│   ├── fusion-config.ts       # 权重/阈值配置（FUSION_CONFIG frozen + configureFusion）
+│   ├── fusion-config.ts       # 权重/阈值配置
 │   └── index.ts               # 桶装出口
 │
 ├── specialized/               # 专项子 Agent（Sprint 4）
@@ -140,81 +158,39 @@ src/
 │   ├── registry.ts            # 专项 Agent 注册表（SpecializedAgentRegistry）
 │   └── index.ts               # 桶装出口（含 SpecializedTarget 类型）
 │
-├── components/                # React UI 组件（仅 ui/ 基座；010-era product-audit 特性已删）
+├── components/                # React UI 组件（仅 ui/ 基座；product-audit 特性已删）
 ├── hooks/                     # 自定义 React Hook（use-mobile）
-├── assets/                    # 静态资源（brand-list.json 27MB，gitignored）
-├── App.tsx                    # 应用入口（pages/ 已空,UI 暂时不可用;后续 sprint 重建）
+├── assets/                    # 静态资源（brand-list.json，gitignored）
+├── App.tsx                    # 应用入口（⚠️ pages/ 已空,UI 暂时不可用）
 ├── App.css / index.css        # 样式入口
 └── main.tsx                   # React 根挂载
 ```
 
-**`src/lib/` 已被整体删除**（2026-06-11）：原 13 个 010-era 业务规则层文件（audit-engine / audit-types / excel-parser / price-validator / jdvop-price-validator / category-validator / vision-validator / prohibited-words / openai-client / wecom-notifier / ai-cache / image-compressor / semaphore）在运行时图中 0 引用——`scripts/run-audit.ts` → `src/orchestrator/` 只依赖 `agents/` + `preprocess/` + `text-risk/` + `fusion/` + `specialized/`。原 src/lib/ 内部 3 个文件（`audit-engine.ts` / `prohibited-words.ts` / `wecom-notifier.ts`）仍作为 Group B 业务资产在本地保留（gitignored）。
-
-**已被清理的 010-era 影子文件**（2026-06-10/11）：
-
-- L1 根目录审计（commit `6e82a7c`）：`audit_rules.js / auditor.js / claude_audit.js / image_audit.js / category_mapper.js / get_category_path.js / split_by_vendor.js`
-- L2 扩展审计：`scripts/audit-5-26.js / scripts/audit-full-rules.js`
-- 整棵 src/lib/ 业务规则层（commit 待生成，本次提交）
-- src/components/features/product-audit/ 全部 6 个组件（本次提交）
-- 空目录：`src/pages/` / `src/contexts/` / `src/components/features/`（本次提交,git 自动清理）
-- 三代审计引擎冲突解决：保留 L3（`src/`）作为唯一权威，删除 L1/L2。
+> **`src/lib/` 已删除**（2026-06-11）：原 010-era 业务规则层 13 个文件在运行时图中 0 引用（`scripts/run-audit.ts` → `src/orchestrator/` 只依赖 `agents/` + `preprocess/` + `text-risk/` + `fusion/` + `specialized/`）。`src/lib/` 内的 `audit-engine.ts` / `prohibited-words.ts` / `wecom-notifier.ts` 仍作为 Group B 业务资产在本地保留（gitignored）。
 
 ### 2.3 数据流
 
 ```
-Excel 上传（UI: pages/UploadTaskPage 或 CLI: scripts/run-audit.ts）
+CLI 入口（scripts/run-audit.ts）
    │
    ▼
-audit-engine（lib/audit-engine.ts，gitignored，本地资产）
+PipelineOrchestrator（src/orchestrator/）
    │
-   ├── 字段规则校验（price-validator / category-validator / prohibited-words …）
+   ├── PreprocessAgent（sharp + MD5/pHash 黑名单 fast-path）
    │
-   ├── 图片预处理（preprocess-agent：sharp + MD5/pHash 黑名单）
+   ├── 7 路并行 fan-out：
+   │      ├── TextRiskAgent    （text-risk/：AC + DFA + regex 三合一）
+   │      ├── VisionAgent      （VLM 调用占位；真实 Qwen-VL 在 epic-3）
+   │      ├── MetadataAgent    （EXIF / GPS / AI-gen 检测）
+   │      ├── PornAgent
+   │      ├── AdAgent
+   │      ├── PoliticalAgent
+   │      └── LogoAgent
    │
-   ├── 流水线编排（orchestrator：init → preprocess → 7-fan-out → fusion → done）
-   │      │
-   │      ├── Text Risk Agent（text-risk/：AC + DFA + regex 三合一）
-   │      ├── Vision Agent（VLM 调用占位）
-   │      ├── Metadata Agent（EXIF / GPS / AI-gen 检测）
-   │      ├── Porn / Ad / Political / Logo 子 Agent（specialized/）
-   │      │
-   │      └── Risk Fusion Agent（fusion/：加权融合 + 阈值决策）
-   │
-   ▼
-异常 SKU 归因（按供应商导出 Excel）
-   │
-   ▼
-Wecom 通知（lib/wecom-notifier.ts，可选）
-```
-
-### 2.3 数据流
-
-```
-Excel 上传
-   │
-   ▼
-audit-engine（lib/）
-   │
-   ├── 字段规则校验（price / category / prohibited-words …）
-   │
-   ├── 图片预处理（preprocess-agent：sharp + pHash 黑名单）
-   │
-   ├── 流水线编排（orchestrator：7-fan-out + risk-fusion）
-   │      │
-   │      ├── Text Risk Agent（text-risk/：AC + DFA + regex）
-   │      ├── Vision Agent（VLM 调用占位）
-   │      ├── Metadata Agent
-   │      ├── Porn / Ad / Political / Logo 子 Agent
-   │      │
-   │      └── Risk Fusion Agent（加权融合 + 阈值决策）
-   │
-   ▼
-异常 SKU 归因（按供应商导出 Excel）
+   └── RiskFusionAgent        （7 层加权 + 阈值映射 → PASS / REVIEW / REJECT）
 ```
 
 ### 2.4 Sprint 增量交付
-
-当前完成度（v0.6.0）：
 
 | Sprint | 版本    | 主题                                                | 状态    |
 | ------ | ------- | --------------------------------------------------- | ------- |
@@ -224,103 +200,30 @@ audit-engine（lib/）
 | 4      | v0.4.0  | 4 专项子 Agent + 真实 RiskFusion + CLI 烟测         | ✅ PASS |
 | 5      | v0.4.1  | 技术债清理（orchestrator 拆解 + 4 个 eslint 遗留） | ✅ PASS |
 | 6      | v0.5.0  | 文字风险匹配核心（AC + DFA + regex，零新依赖）      | ✅ PASS |
-| 9      | v0.6.0  | 违禁词库统一：单一数据源（YAML → 类型化桶装）        | ✅ PASS |
+| 9      | v0.5.0  | 违禁词库统一：单一数据源（YAML → 类型化桶装）        | ✅ PASS |
 | 7/8    | —       | OCR 阶段接入 / TextRiskAgent 真实实现               | ⏸ 延期  |
 
 epic-2 仍需 2 个 Sprint 完成；epic-3 ~ epic-7（视觉真实化、元数据真实化、专项 Agent 真实化、融合生产加固、违禁词漏斗迁移）尚未在 `planner-spec.json` 中拆解。
 
 ---
 
-## 三、技术栈
+## 三、使用方式
 
-### 3.1 运行时与语言
-
-| 项            | 选型 / 版本                              | 说明                                    |
-| ------------- | ---------------------------------------- | --------------------------------------- |
-| 运行时        | **Node.js 25**（ES Modules）             | 原生支持 ESM 与 `tsx`                    |
-| 语言          | **TypeScript ~5.9.3**                    | 严格类型（`tsc --noEmit` 通过）         |
-| 包管理        | pnpm（亦兼容 npm；锁定文件 `pnpm-lock.yaml`） | —                                       |
-| 测试          | **Vitest 4**                             | 145 用例 / 23 文件，全部通过             |
-| 覆盖率        | `@vitest/coverage-v8`                    | 项目行覆盖率 83.99%（v0.5.0 基线）        |
-| Lint          | **ESLint 9**（`typescript-eslint`）       | 新增代码 `--max-warnings=0`              |
-| 端到端        | **Playwright 1.59**                      | UI 流程与诊断脚本                        |
-| 模块执行      | **`tsx`**（`node --import tsx`）        | 零编译直接跑 `.ts` 入口                  |
-
-### 3.2 前端（仅 UI 原型）
-
-| 项         | 选型                                                       |
-| ---------- | ---------------------------------------------------------- |
-| 框架       | **React 19.2** + **Vite 7**                                |
-| 路由       | `wouter`                                                   |
-| 样式       | **Tailwind CSS 4** + `tailwindcss-vite`                    |
-| 组件基座   | `@radix-ui/*` 全家桶（无样式可访问性）                     |
-| 表单       | `react-hook-form` + `zod` + `@hookform/resolvers`          |
-| 图表       | `recharts`                                                 |
-| 动画       | `framer-motion`                                            |
-| 图标       | `lucide-react`                                             |
-| 文件保存   | `file-saver`                                               |
-| Excel 读写 | `xlsx` 0.18.5                                              |
-
-### 3.3 后端 / Agent 核心
-
-| 能力              | 选型 / 实现                                                  |
-| ----------------- | ------------------------------------------------------------ |
-| Agent 基座        | 自研（`src/agents/types.ts` 定义 `Agent` 接口：`id` / `version` / `init` / `run` / `healthcheck`） |
-| 消息总线          | 进程内 `EventEmitter` 实现的 `MessageBus` 接口（可替换 NATS/Kafka） |
-| 编排状态机        | 自研显式状态机（`init` → `preprocess` → 并行 fan-out → fusion → `done` / `cancelled` / `failed`） |
-| 文字风险匹配      | **Aho-Corasick 自动机 + DFA 归一化 + 正则**（纯 TypeScript，零新增依赖） |
-| 词库              | YAML（`src/text-risk/wordlist/wordlist.yaml`，45 条 / 5 类；自研手写 YAML 解析器，未引入 `js-yaml`） |
-| 视觉 / VLM        | DashScope OpenAI 兼容客户端（占位；真实 Qwen3-VL 调用在 epic-3） |
-| 图像预处理        | `sharp` + 手写 pHash（无 `image-hash` 依赖）                 |
-| 持久化            | 文件日志：`./logs/audit_*.log`；审查队列：`./logs/review-queue.jsonl` |
-| 日志体系          | 自研 `audit_logger.js`（JSON 行格式）                         |
-
-### 3.4 数据与契约
-
-| 资产                            | 路径                              | 仓库可见性 |
-| ------------------------------- | --------------------------------- | ---------- |
-| 品牌库                          | `src/assets/brand-list.json`      | gitignored |
-| 黑名单种子                      | `src/preprocess/blocklist-seeds.json` | gitignored |
-| 类目树                          | `category.json`                   | gitignored |
-| 供应商配置                      | `vendor.json`                     | gitignored |
-| 视觉审核缓存                    | `scripts/.audit_vision_cache.json` | gitignored |
-| 真实凭证                        | `.env`（11 个键）                 | gitignored |
-| 凭证模板                        | `.env.example`                    | committed  |
-
-> API 客户端：`axios` 1.13（HTTP 透传）。所有外发请求的 base URL / key 全部走 `process.env.*`，禁止在源码中硬编码。
-
-### 3.5 工具链
-
-- **Harness 设计**（`AGENT.md` / `CLAUDE.md`）：Spec → Plan → Tasks → Implement → Evaluate → Iterate
-- **SprintFoundry 三 Agent GAN**：Planner（Claude sub-agent）+ Generator（Codex CLI）+ Evaluator（Claude sub-agent），由 Orchestrator 编排；运行时状态在 `.sprintfoundry/`（gitignored）
-- **历史 Spec-Kit 体系**（`.specify/`、`specs/`）：规格/计划/任务三层结构化已于 2026-06-10 移除（commit `48f9239`），现统一在 `AGENT.md` + `planner-spec.json` 中维护
-
----
-
-## 四、使用方式
-
-### 4.1 环境要求
+### 3.1 环境要求
 
 ```bash
 node -v     # v25.x（推荐 25.0+）
 pnpm -v     # 任意 8.x+；未装可改用 npm
 ```
 
-### 4.2 克隆与安装
-
-```bash
-git clone git@github.com:YuSec2021/ai-auto-audit.git
-cd ai-auto-audit
-pnpm install        # 或 npm install
-# 业务资产（vendor.json / category.json / brand-list.json 等）需手动从备份恢复；
-# 详见 SECURITY.md §四「开发者上手清单」
-```
-
-### 4.3 跑通烟测（无需任何外部密钥 / 网络）
+### 3.2 跑通烟测（无需任何外部密钥 / 网络）
 
 烟测是 **Hermetic** 的：内联 3 段 `Buffer.from([...])` 字节数组作为 fixture，分别覆盖正常图片 / 黑名单命中 / 损坏数据，全程不调用 DashScope、不访问外网。
 
 ```bash
+git clone git@github.com:YuSec2021/ai-auto-audit.git
+cd ai-auto-audit
+pnpm install
 node --import tsx scripts/run-audit.ts --smoke-test
 ```
 
@@ -342,21 +245,7 @@ node --import tsx scripts/smoke-test-sprint-3.ts
 node --import tsx scripts/smoke-test-sprint-4.ts
 ```
 
-### 4.4 启动 UI 原型
-
-```bash
-pnpm dev           # 或 npm run dev
-# 浏览器打开 http://localhost:5173
-```
-
-UI 提供完整业务流程：
-
-1. **上传 Excel**（`/upload`）—— 拖拽供应商提供的商品表
-2. **任务列表**（`/tasks`）—— 查看所有审核任务
-3. **任务详情**（`/tasks/:id`）—— 进度、暂停、恢复、单 SKU 详情
-4. **导出异常 SKU** —— 按供应商维度下载异常归因 Excel
-
-### 4.5 单元测试与覆盖率
+### 3.3 单元测试与覆盖率
 
 ```bash
 pnpm vitest run                    # 跑全部 145 用例
@@ -364,7 +253,7 @@ pnpm vitest run --coverage         # 跑覆盖率报告
 pnpm vitest run src/text-risk      # 仅跑文字风险模块
 ```
 
-### 4.6 类型检查与 Lint
+### 3.4 类型检查与 Lint
 
 ```bash
 npx tsc -p tsconfig.app.json --noEmit
@@ -372,21 +261,23 @@ pnpm lint                          # 全量 ESLint
 npx eslint src/text-risk/ --max-warnings=0    # 增量 lint（推荐）
 ```
 
-### 4.7 安全审计
+### 3.5 安全审计
 
 ```bash
 npm audit --audit-level=high       # 期望 0 high / 0 critical
 # 也可查看 SECURITY.md §六「历史脱敏审计」中的本地敏感信息扫描结果
 ```
 
-### 4.8 生产构建
+### 3.6 生产构建
 
 ```bash
 pnpm build                         # tsc -b && vite build
 pnpm preview                       # 本地预览构建产物
 ```
 
-### 4.9 直接调用 Agent 核心（库式使用）
+> ⚠️ **UI 暂不可用**：`src/pages/` 在 2026-06-11 的死代码清理中已删除（与 `src/lib/` 同批次），`App.tsx` 仍引用 `@/pages/Home` 与 `@/pages/ProductAudit`。`pnpm dev` 启动后浏览器会白屏。CLI 烟测是当前唯一可用入口，UI 重建规划在后续 Sprint。
+
+### 3.7 直接调用 Agent 核心（库式使用）
 
 文字风险匹配器是纯函数，可独立使用：
 
@@ -409,24 +300,7 @@ import { PROHIBITED_WORDS } from "./src/text-risk/index.js";
 // length 45，localeCompare('zh-Hans-CN') 排序 + 去重
 ```
 
-### 4.10 Excel 审核（端到端）
-
-> 该模式依赖企业内 DashScope 网关与京东 VOP 接口；当前烟测无需这些依赖。
-> 注意：`scripts/audit-excel.ts` 在 2026-06-10 的影子文件清理中删除（commit `6e82a7c`），
-> Excel 端到端入口现统一通过 `scripts/run-audit.ts` + UI 上传实现。
-
-```bash
-# 1) 准备供应商 Excel（编码 UTF-8，UTF-8 BOM 兼容）
-# 2) 启动 UI 上传（pages/UploadTaskPage.tsx），或在脚本中直接调用：
-node --import tsx scripts/run-audit.ts ./待审核.xlsx
-```
-
-输出：
-
-- `./logs/audit_YYYYMMDD_HHMMSS.log` —— 每条审核的全链路日志
-- `./异常SKU_<供应商>_<时间>.xlsx` —— 按供应商归类的异常 SKU 报告
-
-### 4.11 参与开发
+### 3.8 参与开发
 
 1. 阅读 `AGENT.md` 与 `CLAUDE.md`，理解 Spec → Plan → Tasks 流程
 2. 阅读 `planner-spec.json` 中下一个未完成的 Sprint 合同
@@ -434,6 +308,59 @@ node --import tsx scripts/run-audit.ts ./待审核.xlsx
 
 ---
 
+## 四、技术栈
+
+### 4.1 运行时与语言
+
+| 项            | 选型 / 版本                              | 说明                                    |
+| ------------- | ---------------------------------------- | --------------------------------------- |
+| 运行时        | **Node.js 25**（ES Modules）             | 原生支持 ESM 与 `tsx`                    |
+| 语言          | **TypeScript ~5.9.3**                    | 严格类型（`tsc --noEmit` 通过）         |
+| 包管理        | pnpm（亦兼容 npm；锁定文件 `pnpm-lock.yaml`） | —                                       |
+| 测试          | **Vitest 4**                             | 145 用例 / 23 文件，全部通过             |
+| 覆盖率        | `@vitest/coverage-v8`                    | 项目行覆盖率 83.99%（v0.5.0 基线）        |
+| Lint          | **ESLint 9**（`typescript-eslint`）       | 新增代码 `--max-warnings=0`              |
+| 端到端        | **Playwright 1.59**                      | UI 流程与诊断脚本（暂未启用，UI 重建后启用）|
+| 模块执行      | **`tsx`**（`node --import tsx`）        | 零编译直接跑 `.ts` 入口                  |
+
+### 4.2 后端 / Agent 核心
+
+| 能力              | 选型 / 实现                                                  |
+| ----------------- | ------------------------------------------------------------ |
+| Agent 基座        | 自研（`src/agents/types.ts` 定义 `Agent` 接口：`id` / `version` / `init` / `run` / `healthcheck`） |
+| 消息总线          | 进程内 `EventEmitter` 实现的 `MessageBus` 接口（可替换 NATS/Kafka） |
+| 编排状态机        | 自研显式状态机（`init` → `preprocess` → 并行 fan-out → fusion → `done` / `cancelled` / `failed`） |
+| 文字风险匹配      | **Aho-Corasick 自动机 + DFA 归一化 + 正则**（纯 TypeScript，零新增依赖） |
+| 词库              | YAML（`src/text-risk/wordlist/wordlist.yaml`，45 条 / 5 类；自研手写 YAML 解析器，未引入 `js-yaml`） |
+| 视觉 / VLM        | DashScope OpenAI 兼容客户端（占位；真实 Qwen3-VL 调用在 epic-3） |
+| 图像预处理        | `sharp` + 手写 pHash（无 `image-hash` 依赖）                 |
+| 持久化            | 文件日志：`./logs/audit_*.log`；审查队列：`./logs/review-queue.jsonl` |
+| HTTP 客户端       | `axios` 1.13（所有 base URL / key 走 `process.env.*`）       |
+
+### 4.3 数据与契约
+
+| 资产                            | 路径                              | 仓库可见性 |
+| ------------------------------- | --------------------------------- | ---------- |
+| 品牌库                          | `src/assets/brand-list.json`      | gitignored |
+| 黑名单种子                      | `src/preprocess/blocklist-seeds.json` | gitignored |
+| 类目树                          | `category.json`                   | gitignored |
+| 供应商配置                      | `vendor.json`                     | gitignored |
+| 视觉审核缓存                    | `scripts/.audit_vision_cache.json` | gitignored |
+| 真实凭证                        | `.env`（11 个键）                 | gitignored |
+| 凭证模板                        | `.env.example`                    | committed  |
+
+### 4.4 工具链
+
+- **Harness 设计**（`AGENT.md` / `CLAUDE.md`）：Spec → Plan → Tasks → Implement → Evaluate → Iterate
+- **SprintFoundry 三 Agent GAN**：Planner（Claude sub-agent）+ Generator（Codex CLI）+ Evaluator（Claude sub-agent），由 Orchestrator 编排；运行时状态在 `.sprintfoundry/`（gitignored）
+- **历史 Spec-Kit 体系**（`.specify/`、`specs/`）：已于 2026-06-10 移除（commit `48f9239`），现统一在 `AGENT.md` + `planner-spec.json` 中维护
+
+---
+
 ## 五、许可与责任
 
-完整版本与变更记录见 [`CHANGELOG.md`](./CHANGELOG.md)。
+本仓库为 **企业内部项目**（Internal Use Only），所有词库、规则、品牌列表归企业内部所有，不对外授权。
+
+完整版本与变更记录见 [`CHANGELOG.md`](./CHANGELOG.md)；凭证管理与脱敏审计见 [`SECURITY.md`](./SECURITY.md)。
+
+如有问题或建议，请在企业 IM 工具中联系 `yusec`。
