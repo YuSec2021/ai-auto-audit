@@ -49,7 +49,6 @@ playwright-debug.png
 .env
 .env.local
 .env.*.local
-ai-audit-prototype/.env
 
 # --- OS / editor ---
 .DS_Store
@@ -96,15 +95,14 @@ tmp/
 # --- Business data assets (suppliers / categories / brands / cache) ---
 vendor.json
 category.json
-ai-audit-prototype/src/assets/brand-list.json
+src/assets/brand-list.json
 scripts/.audit_vision_cache.json
 
 # --- Rule / wordlist definitions (business-sensitive content) ---
-audit_rules.js
 scripts/audit-full-rules.js
-ai-audit-prototype/src/lib/audit-engine.ts
-ai-audit-prototype/src/lib/prohibited-words.ts
-ai-audit-prototype/src/text-risk/wordlist/wordlist.yaml
+src/lib/audit-engine.ts
+src/lib/prohibited-words.ts
+src/text-risk/wordlist/wordlist.yaml
 
 # --- 010-era scripts reading the above assets ---
 auditor.js
@@ -118,4 +116,4 @@ get_category_path.js
 picture_audit_agent.md
 
 # --- Hardcoded webhook fallback in source (security hot-spot) ---
-ai-audit-prototype/src/lib/wecom-notifier.ts
+src/lib/wecom-notifier.ts

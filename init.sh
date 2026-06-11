@@ -43,7 +43,7 @@ if [ "${NODE_MAJOR}" -lt 20 ]; then
 fi
 
 # ---------- 2. Install / refresh dependencies (idempotent) ----------
-APP_DIR="${PROJECT_ROOT}/ai-audit-prototype"
+APP_DIR="${PROJECT_ROOT}"
 PACKAGE_JSON="${APP_DIR}/package.json"
 LOCK_FILE="${APP_DIR}/package-lock.json"
 NODE_MODULES="${APP_DIR}/node_modules"

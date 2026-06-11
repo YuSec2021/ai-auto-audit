@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI自动审核原型</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (function () {
+        function mount(msg) {
+          var pre = document.getElementById('__err__');
+          if (!pre) {
+            pre = document.createElement('pre');
+            pre.id = '__err__';
+            pre.style.whiteSpace = 'pre-wrap';
+            pre.style.padding = '16px';
+            pre.style.margin = '16px';
+            pre.style.border = '2px solid #111';
+            pre.style.background = '#fff7ed';
+            pre.style.color = '#111';
+            pre.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+            pre.textContent = 'Runtime Error:\n';
+            document.body.appendChild(pre);
+          }
+          pre.textContent += msg + '\n';
+        }
+        window.addEventListener('error', function (e) {
+          mount(String(e.message || e.error || e));
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          mount('UnhandledRejection: ' + String(e.reason));
+        });
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

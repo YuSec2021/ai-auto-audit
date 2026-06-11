@@ -12,7 +12,7 @@
   "verification": {
     "mode": "cli",
     "base_url": "N/A",
-    "command": "node --import tsx ai-audit-prototype/scripts/run-audit.ts --smoke-test",
+    "command": "node --import tsx scripts/run-audit.ts --smoke-test",
     "smoke_test_scenarios": [
       "preprocess-1: input a remote JPEG, assert hash + compressed dataURL are produced",
       "pipeline-1: stub all agents, assert Preprocess -> (parallel) -> Fusion state transitions",
@@ -90,11 +90,11 @@
       "epic_id": "epic-2",
       "title": "Text Risk matcher core (AC automaton + DFA + regex, pure TS)",
       "features": [
-        "Pure TypeScript library under ai-audit-prototype/src/text-risk/ (no IO, no new npm dependencies)",
+        "Pure TypeScript library under src/text-risk/ (no IO, no new npm dependencies)",
         "AC automaton (Aho-Corasick) for one-pass multi-pattern exact matching",
         "DFA tokenizer for input normalization (case folding, fullwidth/halfwidth, whitespace)",
         "Regex matcher for variable-shape patterns (per-entry match: regex field)",
-        "Structured wordlist at ai-audit-prototype/src/text-risk/wordlist/wordlist.yaml (YAML format, versioned in repo)",
+        "Structured wordlist at src/text-risk/wordlist/wordlist.yaml (YAML format, versioned in repo)",
         "Wordlist migrated from 010-era prohibited-words.ts (45 entries: 极限词 13, 虚假宣传 4, 平台违规 20, 促销诱导 8; 禁售商品 removed 2026-06-10)",
         "Match result: { matched: WordlistMatch[]; total: number; score: number } with score in [0,1] = clamp01(matched.length / total_entries)"
       ]
@@ -105,7 +105,7 @@
       "title": "OCR stage integration (PaddleOCR binary via Python HTTP service)",
       "features": [
         "PaddleOCR pip package installed via init.sh; Python HTTP service on http://localhost:8866",
-        "New ai-audit-prototype/src/ocr/ module: client.ts (HTTP client), preprocess.ts (image → base64 for PaddleOCR), agent.ts (OcrAgent implementing Agent interface, id=ocr-agent-007, version=0.7.0)",
+        "New src/ocr/ module: client.ts (HTTP client), preprocess.ts (image → base64 for PaddleOCR), agent.ts (OcrAgent implementing Agent interface, id=ocr-agent-007, version=0.7.0)",
         "Orchestrator state machine: introduce 'ocr' state between preprocess and the 7-fan-out (state-machine.ts updated to include ocr → parallel-fan-out transition)",
         "Audit-line tuple preserved: normal 9 → 10 (1 preprocess + 1 ocr + 7 fan-out + 1 fusion); blocklist 2 → 3 (1 preprocess + 1 ocr + 1 fusion, 7 fan-out skipped); corrupt 9 → 10",
         "Failure degradation: if PaddleOCR unavailable / timeout, ocr-agent returns { score: 0, reason: 'ocr-unavailable' }; orchestrator continues (does not block the fan-out)",
@@ -133,9 +133,9 @@
       "epic_id": "epic-2",
       "title": "Unify prohibited-words library: single source of truth (absorb 17 uncommitted 'delete 禁售商品' edits)",
       "features": [
-        "Single source of truth: ai-audit-prototype/src/text-risk/wordlist/wordlist.yaml — the structured wordlist introduced in Sprint 6 (45 entries after 禁售商品 category removal: 极限词 13, 虚假宣传 4, 平台违规 20, 促销诱导 8)",
-        "One TypeScript loader module that re-exports the parsed wordlist as a typed structure (extend ai-audit-prototype/src/text-risk/wordlist.ts with loadWordlistFromDefault() / export a typed PROHIBITED_WORDS array derived from the YAML)",
-        "One consumer-facing module (extend ai-audit-prototype/src/text-risk/index.ts barrel) that the engine, LLM helper, validators, and scripts import — exports a PROHIBITED_WORDS string[] (sorted, deduplicated) and a WordlistEntry[] derived from the YAML",
+        "Single source of truth: src/text-risk/wordlist/wordlist.yaml — the structured wordlist introduced in Sprint 6 (45 entries after 禁售商品 category removal: 极限词 13, 虚假宣传 4, 平台违规 20, 促销诱导 8)",
+        "One TypeScript loader module that re-exports the parsed wordlist as a typed structure (extend src/text-risk/wordlist.ts with loadWordlistFromDefault() / export a typed PROHIBITED_WORDS array derived from the YAML)",
+        "One consumer-facing module (extend src/text-risk/index.ts barrel) that the engine, LLM helper, validators, and scripts import — exports a PROHIBITED_WORDS string[] (sorted, deduplicated) and a WordlistEntry[] derived from the YAML",
         "Absorb the 17 uncommitted files from the 'delete 禁售商品' ad-hoc change: prohibited-words.ts (010-era, see Out-of-scope), wordlist.yaml, wordlist.test.ts, audit-engine.ts, audit-types.ts, App.tsx, babel-plugin-jsx-source-location.cjs, ErrorBoundary.tsx, AuditContext.tsx, ThemeContext.tsx, exporters.ts, utils.ts, Home.tsx, NotFound.tsx, TaskDetailPage.tsx, TasksPage.tsx, UploadTaskPage.tsx — sprint 9 design supersedes those ad-hoc edits",
         "Remove all 'do not change' / 'keep in sync' / '已迁移至' cross-references between consumers (the YAML is the source; no consumer 'owns' the list anymore)",
         "Single test that asserts the new module matches the YAML (no need to retest 17 consumers individually)",
