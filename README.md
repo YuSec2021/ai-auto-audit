@@ -36,8 +36,6 @@
 
 ## 二、代码架构
 
-> 2026-06-10 起项目目录已**扁平化**：原 `ai-audit-prototype/` 子目录删除，所有源码移到仓库根。详见 CHANGELOG §v0.5.0 之后条目。
-
 ### 2.1 顶层目录（2026-06-11 当前状态）
 
 ```
@@ -78,12 +76,9 @@ ai-auto-audit/
 | 路径                                          | 说明                          |
 | --------------------------------------------- | ----------------------------- |
 | `src/assets/brand-list.json`                  | 品牌库（27MB）                |
-| `src/lib/audit-engine.ts`                     | 010 时代审核主流程            |
-| `src/lib/prohibited-words.ts`                 | 010 时代词库兼容层            |
 | `src/lib/wecom-notifier.ts`                   | 企业微信通知                  |
 | `src/text-risk/wordlist/wordlist.yaml`        | 违禁词词表                    |
 | `scripts/.audit_vision_cache.json`            | 视觉审核缓存                  |
-| `picture_audit_agent.md`                      | 旧 Agent 设计文档             |
 
 > 这些文件保留在工作树是因为本地开发需要它们；新协作者通过 `.env.example` 和 `SECURITY.md §四` 即可恢复运行环境。
 
@@ -145,34 +140,23 @@ src/
 │   ├── registry.ts            # 专项 Agent 注册表（SpecializedAgentRegistry）
 │   └── index.ts               # 桶装出口（含 SpecializedTarget 类型）
 │
-├── lib/                       # 业务规则层（010 时代沉淀；多数文件 gitignored）
-│   ├── audit-engine.ts        # 审核主流程：Excel 解析 → 多维校验 → 异常归因  [gitignored]
-│   ├── audit-types.ts         # 共享类型契约
-│   ├── excel-parser.ts        # xlsx 解析（基于 xlsx 库）
-│   ├── price-validator.ts     # 价格规则
-│   ├── jdvop-price-validator.ts # 京东 VOP 价格校验（base 走 JD_PRICE_API_BASE env）
-│   ├── category-validator.ts  # 类目一致性
-│   ├── prohibited-words.ts    # 010 时代词库函数（保留兼容，Sprint 9 已统一源头）[gitignored]
-│   ├── vision-validator.ts    # 视觉校验（占位）
-│   ├── openai-client.ts       # DashScope OpenAI 兼容客户端
-│   ├── wecom-notifier.ts      # 企业微信通知                              [gitignored]
-│   ├── ai-cache.ts            # AI 推理结果缓存
-│   ├── image-compressor.ts    # 图片压缩（供上传 UI 使用）
-│   └── semaphore.ts           # 异步并发信号量
-│
-├── components/                # React UI 组件（保留 6 个 product-audit 特性 + ui/ 基座）
-├── pages/                     # 路由页面（Home / Tasks / TaskDetail / UploadTask / NotFound）
+├── components/                # React UI 组件（仅 ui/ 基座；010-era product-audit 特性已删）
 ├── hooks/                     # 自定义 React Hook（use-mobile）
 ├── assets/                    # 静态资源（brand-list.json 27MB，gitignored）
-├── App.tsx                    # 应用入口
+├── App.tsx                    # 应用入口（pages/ 已空,UI 暂时不可用;后续 sprint 重建）
 ├── App.css / index.css        # 样式入口
 └── main.tsx                   # React 根挂载
 ```
 
-**已被清理的 22 个 L1/L2-era 影子文件**（2026-06-10 commit `6e82a7c`）：
+**`src/lib/` 已被整体删除**（2026-06-11）：原 13 个 010-era 业务规则层文件（audit-engine / audit-types / excel-parser / price-validator / jdvop-price-validator / category-validator / vision-validator / prohibited-words / openai-client / wecom-notifier / ai-cache / image-compressor / semaphore）在运行时图中 0 引用——`scripts/run-audit.ts` → `src/orchestrator/` 只依赖 `agents/` + `preprocess/` + `text-risk/` + `fusion/` + `specialized/`。原 src/lib/ 内部 3 个文件（`audit-engine.ts` / `prohibited-words.ts` / `wecom-notifier.ts`）仍作为 Group B 业务资产在本地保留（gitignored）。
 
-- L1 根目录审计：`audit_rules.js / auditor.js / claude_audit.js / image_audit.js / category_mapper.js / get_category_path.js / split_by_vendor.js`
+**已被清理的 010-era 影子文件**（2026-06-10/11）：
+
+- L1 根目录审计（commit `6e82a7c`）：`audit_rules.js / auditor.js / claude_audit.js / image_audit.js / category_mapper.js / get_category_path.js / split_by_vendor.js`
 - L2 扩展审计：`scripts/audit-5-26.js / scripts/audit-full-rules.js`
+- 整棵 src/lib/ 业务规则层（commit 待生成，本次提交）
+- src/components/features/product-audit/ 全部 6 个组件（本次提交）
+- 空目录：`src/pages/` / `src/contexts/` / `src/components/features/`（本次提交,git 自动清理）
 - 三代审计引擎冲突解决：保留 L3（`src/`）作为唯一权威，删除 L1/L2。
 
 ### 2.3 数据流
@@ -452,8 +436,4 @@ node --import tsx scripts/run-audit.ts ./待审核.xlsx
 
 ## 五、许可与责任
 
-本仓库为 **企业内部项目**（Internal Use Only），所有词库、规则、品牌列表归企业内部所有，不对外授权。
-
 完整版本与变更记录见 [`CHANGELOG.md`](./CHANGELOG.md)。
-
-如有问题或建议，请在企业 IM 工具中联系 `yusec`。
