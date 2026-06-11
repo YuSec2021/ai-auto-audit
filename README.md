@@ -450,39 +450,10 @@ node --import tsx scripts/run-audit.ts ./待审核.xlsx
 
 ---
 
-## 五、版本与变更
-
-完整变更记录见 [`CHANGELOG.md`](./CHANGELOG.md)。当前 HEAD = `v0.5.0`（Sprint 9 PASS，2026-06-11 housekeeping 后）。
-
-| 字段             | 值                                                            |
-| ---------------- | ------------------------------------------------------------- |
-| 仓库             | `git@github.com:YuSec2021/ai-auto-audit.git`                  |
-| 主分支           | `main`（仅 1 个，7 个 codex/sprint-* 历史分支已删除）          |
-| 当前版本         | **v0.5.0**（最近一次功能 Sprint 是 Sprint 9）                   |
-| 已完成 Sprint    | 7（Sprint 1-6 + Sprint 9；7/8 延期）                          |
-| 累计测试         | 145 vitest 用例 / 23 文件                                      |
-| 仓库体积         | `.git/` 1.9MB（2026-06-11 历史脱敏后，从 50MB+ 缩减 96%）        |
-| 已脱敏凭证       | 5 项（详见 SECURITY.md §六）                                   |
-
-### 2026-06 Housekeeping（不在 v0.5.0 → v0.6.0 之间的功能发布）
-
-| 日期       | Commit      | 内容                                                                 |
-| ---------- | ----------- | -------------------------------------------------------------------- |
-| 2026-06-10 | `c6dfb46`   | 标记所有敏感业务数据文件为 gitignored                                |
-| 2026-06-10 | `70abbf7`   | 合并 3 个 .env 文件到单源 + 添加 .env.example + SECURITY.md         |
-| 2026-06-10 | `6e82a7c`   | 删除 22 个 L1/L2-era 影子文件（三代审计引擎统一到 L3）              |
-| 2026-06-10 | `0ddbdde`   | 2 篇 docs 移到 docs/ + 删除 sprint-contract.md + 移除 wecom fallback |
-| 2026-06-10 | `b918cbb`   | 扁平化：将原 `ai-audit-prototype/` 子目录所有源码移到仓库根         |
-| 2026-06-11 | `5faf5c2`   | `git rm --cached` 9 个历史 tracked 的敏感文件                         |
-| 2026-06-11 | filter-repo | 重写全部 35 个 commit 的历史，删除 7 个 codex/sprint-* 分支          |
-| 2026-06-11 | `e7f5b96`   | SECURITY.md §六「历史脱敏审计」                                       |
-
-详细脱敏验证表见 SECURITY.md §六.4。
-
----
-
-## 六、许可与责任
+## 五、许可与责任
 
 本仓库为 **企业内部项目**（Internal Use Only），所有词库、规则、品牌列表归企业内部所有，不对外授权。
+
+完整版本与变更记录见 [`CHANGELOG.md`](./CHANGELOG.md)。
 
 如有问题或建议，请在企业 IM 工具中联系 `yusec`。
